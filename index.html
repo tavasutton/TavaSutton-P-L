@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Restaurant Daily P&amp;L (Copy)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E6ECE8; --surface:#F7F9F7; --paper:#FFFFFF; --ink:#17231D; --muted:#5B6B62; --line:#CBD5CF;
+  --accent:#D99A1E; --accent-ink:#2A1C00; --profit:#237A4B; --loss:#B83A26; --field:#FFFFFF;
+  --sans:"Bricolage Grotesque", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#101612; --surface:#18201B; --paper:#1F2823; --ink:#E4EBE6; --muted:#98A89F; --line:#2E3A33;
+    --accent:#E8AE3A; --accent-ink:#241700; --profit:#4FB57E; --loss:#E0654F; --field:#121A15;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101612; --surface:#18201B; --paper:#1F2823; --ink:#E4EBE6; --muted:#98A89F; --line:#2E3A33;
+  --accent:#E8AE3A; --accent-ink:#241700; --profit:#4FB57E; --loss:#E0654F; --field:#121A15;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+main{max-width:640px;margin:0 auto;padding:16px 16px 110px}
+h1{font-size:1.6rem;font-weight:800;letter-spacing:-.02em;margin:4px 0 2px;line-height:1.1}
+h2{font-size:1.15rem;font-weight:700;margin:28px 0 10px;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:.9rem;margin:0}
+.status{font-size:.8rem;color:var(--muted);margin-top:4px}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.tab{display:none}.tab.on{display:block}
+
+/* Bottom nav */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom,0px);z-index:10}
+nav.tabs .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+nav.tabs button{background:none;border:0;padding:10px 2px 12px;font-size:.78rem;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.tabs button .ic{font-size:1.2rem;line-height:1}
+nav.tabs button[aria-current="page"]{color:var(--ink);font-weight:700}
+nav.tabs button[aria-current="page"] .ic{transform:translateY(-1px)}
+
+/* Date stepper */
+.stepper{display:flex;align-items:center;gap:8px;margin:14px 0}
+.stepper button{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:1.2rem}
+.stepper input{flex:1;height:44px;border:1px solid var(--line);border-radius:10px;background:var(--field);padding:0 10px;text-align:center;font-weight:600}
+
+/* The receipt */
+.receipt{background:var(--paper);font-family:var(--mono);font-size:.86rem;padding:20px 18px 26px;position:relative;
+  box-shadow:0 1px 0 var(--line), 0 10px 24px -18px rgba(0,0,0,.35);margin-bottom:18px}
+.receipt::after{content:"";position:absolute;left:0;right:0;bottom:-9px;height:10px;
+  background:linear-gradient(-45deg,transparent 7px,var(--paper) 0) 0 0/14px 10px repeat-x,
+             linear-gradient(45deg,transparent 7px,var(--paper) 0) 0 0/14px 10px repeat-x}
+.receipt .head{text-align:center;margin-bottom:12px}
+.receipt .head b{display:block;font-size:1rem}
+.receipt .row{display:flex;justify-content:space-between;gap:12px;padding:2px 0}
+.receipt .row span:last-child{text-align:right;white-space:nowrap}
+.receipt .ind{padding-left:14px;color:var(--muted)}
+.receipt .neg{color:var(--loss)}
+.receipt hr{border:0;border-top:1px dashed var(--line);margin:8px 0}
+.receipt .total{font-size:1.25rem;font-weight:700;padding-top:4px}
+.receipt .total.p{color:var(--profit)}.receipt .total.l{color:var(--loss)}
+.receipt .foot{text-align:center;color:var(--muted);margin-top:10px;font-size:.78rem}
+
+/* Month strip */
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.cell{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.cell .k{font-size:.8rem;color:var(--muted)}
+.cell .v{font-size:1.15rem;font-weight:700;font-variant-numeric:tabular-nums}
+.cell.wide{grid-column:1/-1;border-color:var(--ink)}
+.p{color:var(--profit)}.l{color:var(--loss)}
+
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px}
+.chart svg{display:block;width:100%;height:auto}
+
+/* Forms */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
+label.f{display:block;margin-bottom:12px}
+label.f>span{display:block;font-size:.85rem;font-weight:600;margin-bottom:4px}
+label.f input,label.f select{width:100%;height:46px;border:1px solid var(--line);border-radius:8px;background:var(--field);padding:0 12px}
+.money{position:relative}
+.money::before{content:attr(data-cur);position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.money input{padding-left:28px!important;font-variant-numeric:tabular-nums}
+.hint{font-size:.8rem;color:var(--muted);margin-top:4px;font-family:var(--mono)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{display:block;width:100%;height:50px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:1rem}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);font-weight:600;height:44px;margin-top:8px}
+.btn:disabled{opacity:.5;cursor:default}
+.plat{border-top:1px solid var(--line);padding-top:12px;margin-top:4px}
+.plat-h{display:flex;justify-content:space-between;align-items:baseline;font-weight:700;margin-bottom:8px}
+.plat-h small{font-weight:400;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);
+  background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:.9rem;opacity:0;transition:.2s;pointer-events:none;z-index:20}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+/* Lists */
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.list li:last-child{border-bottom:0}
+.list .grow{flex:1;min-width:0}
+.list .t{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list .m{font-size:.8rem;color:var(--muted)}
+.list .amt{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.x{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:none;color:var(--muted);font-size:1rem;flex:none}
+.dayhead{font-size:.8rem;font-weight:700;color:var(--muted);padding-top:12px}
+.empty{color:var(--muted);text-align:center;padding:18px 8px;font-size:.92rem}
+.rec-amt{width:110px;height:38px;border:1px solid var(--line);border-radius:8px;background:var(--field);padding:0 8px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* Report table */
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.85rem;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--surface)}
+thead th{font-weight:700;color:var(--muted);font-size:.78rem}
+tfoot td{font-weight:800;border-bottom:0;border-top:2px solid var(--ink)}
+.row-actions{display:flex;gap:8px;margin:12px 0}
+.row-actions input{flex:1;height:44px;border:1px solid var(--line);border-radius:8px;background:var(--field);padding:0 10px}
+.row-actions .btn{width:auto;padding:0 16px;height:44px}
+#login{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
+#login[hidden]{display:none}
+#login form{width:100%;max-width:360px}
+#loginErr{color:var(--loss);font-size:.9rem;min-height:1.2em;margin:0 0 10px}
+#outBtn{background:none;border:0;color:var(--muted);text-decoration:underline;font:inherit;font-size:.85rem;padding:4px 0}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1 id="appTitle">Daily P&amp;L</h1>
+    <p class="status" id="status">Loading your books…</p>
+    <button type="button" id="outBtn" hidden>Sign out</button>
+  </header>
+
+  <!-- TODAY -->
+  <section class="tab on" id="t-today" aria-label="Daily profit and loss">
+    <div class="stepper">
+      <button type="button" id="dPrev" aria-label="Previous day">‹</button>
+      <input type="date" id="dDate" aria-label="Day to view">
+      <button type="button" id="dNext" aria-label="Next day">›</button>
+    </div>
+    <div class="receipt" id="receipt"></div>
+    <h2 id="mtdTitle">Month to date</h2>
+    <div class="grid" id="mtd"></div>
+    <h2>Profit, last 14 days</h2>
+    <div class="chart" id="chart"></div>
+  </section>
+
+  <!-- SALES -->
+  <section class="tab" id="t-sales" aria-label="Daily sales">
+    <p class="sub">Enter the full order value for each delivery platform. Commission is taken off automatically.</p>
+    <div class="card" style="margin-top:14px">
+      <label class="f"><span>Date</span><input type="date" id="sDate"></label>
+      <div class="two">
+        <label class="f"><span>Cash</span><div class="money cur"><input inputmode="decimal" id="sCash" placeholder="0.00"></div></label>
+        <label class="f"><span>Card</span><div class="money cur"><input inputmode="decimal" id="sCard" placeholder="0.00"></div></label>
+      </div>
+      <div id="platFields"></div>
+      <button class="btn" type="button" id="sSave">Save sales</button>
+      <button class="btn ghost" type="button" id="sDel" hidden>Clear this day's sales</button>
+    </div>
+    <h2>Commission rates</h2>
+    <p class="sub">Check these against your contracts. Changes apply to days you save from now on.</p>
+    <div class="card" style="margin-top:10px" id="rateFields"></div>
+    <h2>Currency</h2>
+    <div class="card"><label class="f" style="margin:0"><span>Symbol</span>
+      <select id="curSel"><option value="£">£ Pound</option><option value="€">€ Euro</option><option value="$">$ Dollar</option></select></label></div>
+  </section>
+
+  <!-- SPEND -->
+  <section class="tab" id="t-spend" aria-label="Supplier and day-to-day spend">
+    <p class="sub">Supplier invoices, food and drink deliveries, and any one-off costs.</p>
+    <div class="card" style="margin-top:14px">
+      <div class="two">
+        <label class="f"><span>Date</span><input type="date" id="eDate"></label>
+        <label class="f"><span>Amount</span><div class="money cur"><input inputmode="decimal" id="eAmt" placeholder="0.00"></div></label>
+      </div>
+      <label class="f"><span>Category</span><select id="eCat"></select></label>
+      <label class="f"><span>Supplier</span><input id="eSup" list="supList" placeholder="e.g. Brakes, Booker, local butcher" autocomplete="off"></label>
+      <datalist id="supList"></datalist>
+      <label class="f"><span>Note (optional)</span><input id="eNote" placeholder="Invoice number, what it was for"></label>
+      <button class="btn" type="button" id="eAdd">Add spend</button>
+    </div>
+    <h2 id="spendTitle">This month</h2>
+    <div class="grid" id="spendCats" style="margin-bottom:10px"></div>
+    <div class="card"><ul class="list" id="spendList"></ul></div>
+  </section>
+
+  <!-- REGULAR COSTS -->
+  <section class="tab" id="t-regular" aria-label="Regular costs">
+    <p class="sub">Staff, rent, utilities and other running costs. Each one is spread across every day so your daily P&amp;L shows the true picture.</p>
+    <div class="card" style="margin-top:14px">
+      <label class="f"><span>Cost</span><input id="rName" list="recSuggest" placeholder="e.g. Staff wages"></label>
+      <datalist id="recSuggest">
+        <option value="Staff wages"><option value="Rent"><option value="Business rates"><option value="Electricity"><option value="Gas"><option value="Water">
+        <option value="Insurance"><option value="POS / software"><option value="Broadband & phone"><option value="Waste collection"><option value="Accountant"><option value="Loan repayment"><option value="Equipment lease">
+      </datalist>
+      <div class="two">
+        <label class="f"><span>Amount</span><div class="money cur"><input inputmode="decimal" id="rAmt" placeholder="0.00"></div></label>
+        <label class="f"><span>Paid</span><select id="rFreq"><option value="monthly">Monthly</option><option value="weekly">Weekly</option><option value="yearly">Yearly</option></select></label>
+      </div>
+      <button class="btn" type="button" id="rAdd">Add regular cost</button>
+    </div>
+    <h2>Your regular costs</h2>
+    <div class="grid" id="recTotals" style="margin-bottom:10px"></div>
+    <div class="card"><ul class="list" id="recList"></ul></div>
+  </section>
+
+  <!-- REPORT -->
+  <section class="tab" id="t-report" aria-label="Monthly report">
+    <div class="row-actions">
+      <input type="month" id="mSel" aria-label="Month">
+      <button class="btn" type="button" id="csvBtn" hidden>Export CSV</button>
+    </div>
+    <div class="grid" id="mSummary" style="margin-bottom:14px"></div>
+    <div class="scroll"><table id="mTable"></table></div>
+    <p class="sub" style="margin-top:10px">Net sales are after platform commission. Regular costs are shared out by day.</p>
+  </section>
+</main>
+
+<nav class="tabs" aria-label="Sections"><div class="in">
+  <button data-tab="today" aria-current="page"><span class="ic">🧾</span>P&amp;L</button>
+  <button data-tab="sales"><span class="ic">💷</span>Sales</button>
+  <button data-tab="spend"><span class="ic">🧺</span>Spend</button>
+  <button data-tab="regular"><span class="ic">🔁</span>Regular</button>
+  <button data-tab="report"><span class="ic">📅</span>Report</button>
+</div></nav>
+<div id="login" hidden><form class="card" id="loginForm">
+  <h2 style="margin:0 0 12px">Sign in</h2>
+  <label class="f"><span>Email</span><input id="lEmail" type="email" autocomplete="username" required></label>
+  <label class="f"><span>Password</span><input id="lPass" type="password" autocomplete="current-password" required></label>
+  <p id="loginErr" role="alert"></p>
+  <button class="btn" type="submit">Sign in</button>
+</form></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+(function(){
+"use strict";
+const PLATFORMS=[{id:"uber",name:"Uber Eats",def:30},{id:"deliveroo",name:"Deliveroo",def:30},{id:"justeat",name:"Just Eat",def:14}];
+const CATS=["Food supplier","Drinks supplier","Packaging","Cleaning & supplies","Repairs & maintenance","Marketing","Casual staff","Other"];
+const FOODCATS=["Food supplier","Drinks supplier"];
+const LKEY="rpnl-books-v1";
+/* ---- Shared database (Supabase). Paste your two values from Project Settings -> API ---- */
+const SB_URL="https://mlcnzviutgxetdzxtghp.supabase.co/rest/v1/", SB_KEY="sb_publishable_DTHKwAKafwNYzNv0UxiTCQ_W0o6QAgo";
+
+const S={settings:{currency:"£",rates:{uber:30,deliveroo:30,justeat:14}},sales:{},expenses:{},recurring:{}};
+let backend=null, downloads=null;
+
+/* ---------- utils ---------- */
+const $=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,"0");
+const iso=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const parse=s=>{const[a,b,c]=s.split("-").map(Number);return new Date(a,b-1,c)};
+const addDays=(s,n)=>{const d=parse(s);d.setDate(d.getDate()+n);return iso(d)};
+const today=()=>iso(new Date());
+const dim=s=>{const d=parse(s);return new Date(d.getFullYear(),d.getMonth()+1,0).getDate()};
+const num=v=>{const n=parseFloat(String(v??"").replace(/[^0-9.\-]/g,""));return isFinite(n)?n:0};
+const r2=n=>Math.round(n*100)/100;
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const cur=()=>S.settings.currency||"£";
+const fmt=n=>(n<0?"−":"")+cur()+Math.abs(n).toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2});
+const pct=(a,b)=>b>0?(a/b*100).toFixed(1)+"%":"–";
+const nice=s=>parse(s).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short",year:"numeric"});
+const short=s=>parse(s).toLocaleDateString("en-GB",{weekday:"short",day:"numeric"});
+const monthName=m=>parse(m+"-01").toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+const uid=()=>(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2));
+function toast(t){const el=$("toast");el.textContent=t;el.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove("show"),1800)}
+
+/* ---------- maths ---------- */
+function dailyFixed(dateStr){
+  let t=0;
+  for(const r of Object.values(S.recurring)){
+    const a=num(r.amount);
+    if(r.freq==="weekly")t+=a/7;
+    else if(r.freq==="yearly")t+=a/365;
+    else t+=a/dim(dateStr);
+  }
+  return t;
+}
+function day(dateStr){
+  const s=S.sales[dateStr]||{};
+  const rates=s.rates||S.settings.rates;
+  const cash=num(s.cash), card=num(s.card);
+  const plats=PLATFORMS.map(p=>{const g=num(s[p.id]),rate=num(rates[p.id]),c=r2(g*rate/100);return{...p,gross:g,rate,comm:c,net:g-c}});
+  const platGross=plats.reduce((a,p)=>a+p.gross,0), comm=plats.reduce((a,p)=>a+p.comm,0);
+  const gross=cash+card+platGross, net=gross-comm;
+  const exps=Object.values(S.expenses).filter(e=>e.date===dateStr);
+  const spend=exps.reduce((a,e)=>a+num(e.amount),0);
+  const food=exps.filter(e=>FOODCATS.includes(e.category)).reduce((a,e)=>a+num(e.amount),0);
+  const fixed=dailyFixed(dateStr);
+  return{has:!!S.sales[dateStr],cash,card,plats,platGross,comm,gross,net,exps,spend,food,fixed,profit:net-spend-fixed};
+}
+function range(from,to){
+  const t={gross:0,comm:0,net:0,spend:0,food:0,fixed:0,profit:0,days:[]};
+  for(let d=from;d<=to;d=addDays(d,1)){const x=day(d);t.days.push([d,x]);for(const k of["gross","comm","net","spend","food","fixed","profit"])t[k]+=x[k]}
+  return t;
+}
+
+/* ---------- storage backends ---------- */
+function localBackend(){
+  try{const raw=localStorage.getItem(LKEY);if(raw){const o=JSON.parse(raw);Object.assign(S,{settings:{...S.settings,...o.settings},sales:o.sales||{},expenses:o.expenses||{},recurring:o.recurring||{}})}}catch(e){}
+  const persist=()=>{try{localStorage.setItem(LKEY,JSON.stringify(S))}catch(e){toast("Couldn't save on this device")}};
+  return{
+    mode:"local",
+    saveSale:async(d,o)=>{S.sales[d]=o;persist();render()},
+    delSale:async d=>{delete S.sales[d];persist();render()},
+    addExp:async o=>{S.expenses[uid()]=o;persist();render()},
+    delExp:async id=>{delete S.expenses[id];persist();render()},
+    addRec:async o=>{S.recurring[uid()]=o;persist();render()},
+    updRec:async(id,o)=>{S.recurring[id]={...S.recurring[id],...o};persist();render()},
+    delRec:async id=>{delete S.recurring[id];persist();render()},
+    saveSettings:async()=>{persist();render()}
+  };
+}
+async function dbBackend(){
+  if(!window.claude||!window.claude.use)return null;
+  const [db,user]=await Promise.all([window.claude.use("db"),window.claude.use("user")]);
+  if(!db||!user)return null;
+  const id=await user.id(); if(!id)return null;
+  const base="data/users/"+id;
+  S.sales={};S.expenses={};S.recurring={};
+  const books=db.doc(base+"/books"), setDoc=db.doc(base+"/settings");
+  const sales=books.collection("sales"), exps=books.collection("expenses"), recs=books.collection("recurring");
+  const toMap=snap=>{const m={};snap.docs.forEach(d=>{m[d.id]=d.data()});return m};
+  const onErr=e=>{setStatus("Sync problem: "+(e&&e.message||"unknown")+". Changes may not save.")};
+  sales.limit(1000).onSnapshot(s=>{S.sales=toMap(s);render()},onErr);
+  exps.orderBy("date","desc").limit(1000).onSnapshot(s=>{S.expenses=toMap(s);render()},onErr);
+  recs.limit(200).onSnapshot(s=>{S.recurring=toMap(s);render()},onErr);
+  setDoc.onSnapshot(s=>{if(s.exists){S.settings={...S.settings,...s.data()};applyCurrency();render()}},onErr);
+  const w=p=>p.catch(e=>{toast(e&&e.code==="invalid_argument"?"You don't have permission to save here":"Couldn't save. Try again.");throw e});
+  return{
+    mode:"cloud",
+    saveSale:(d,o)=>w(sales.doc(d).set(o)),
+    delSale:d=>w(sales.doc(d).delete()),
+    addExp:o=>w(exps.add(o)),
+    delExp:i=>w(exps.doc(i).delete()),
+    addRec:o=>w(recs.add(o)),
+    updRec:(i,o)=>w(recs.doc(i).update(o)),
+    delRec:i=>w(recs.doc(i).delete()),
+    saveSettings:()=>w(setDoc.set({currency:S.settings.currency,rates:S.settings.rates}))
+  };
+}
+async function supaBackend(){
+  if(!window.supabase||SB_URL.startsWith("PASTE"))return null;
+  const sb=window.supabase.createClient(SB_URL,SB_KEY);
+  let {data:{session}}=await sb.auth.getSession();
+  while(!session){
+    session=await new Promise(res=>{
+      const box=$("login");box.hidden=false;
+      $("loginForm").onsubmit=async e=>{
+        e.preventDefault();$("loginErr").textContent="";
+        const {data,error}=await sb.auth.signInWithPassword({email:$("lEmail").value.trim(),password:$("lPass").value});
+        if(error){$("loginErr").textContent="Wrong email or password.";return}
+        box.hidden=true;$("lPass").value="";res(data.session);
+      };
+    });
+  }
+  $("outBtn").hidden=false;
+  $("outBtn").onclick=async()=>{await sb.auth.signOut();location.reload()};
+  const load=async()=>{
+    const rows=[];
+    for(let from=0;;from+=1000){
+      const {data,error}=await sb.from("records").select("kind,id,data").order("kind").order("id").range(from,from+999);
+      if(error)throw error;
+      rows.push(...data);
+      if(data.length<1000)break;
+    }
+    S.sales={};S.expenses={};S.recurring={};
+    for(const r of rows){
+      if(r.kind==="sale")S.sales[r.id]=r.data;
+      else if(r.kind==="expense")S.expenses[r.id]=r.data;
+      else if(r.kind==="recurring")S.recurring[r.id]=r.data;
+      else if(r.kind==="settings")S.settings={...S.settings,...r.data};
+    }
+    applyCurrency();render();
+  };
+  const w=async fn=>{const {error}=await fn();if(error){toast("Couldn't save. Try again.");throw error}await load()};
+  const put=(kind,id,o)=>w(()=>sb.from("records").upsert({kind,id,data:o,updated_at:new Date().toISOString()},{onConflict:"kind,id"}));
+  const del=(kind,id)=>w(()=>sb.from("records").delete().eq("kind",kind).eq("id",id));
+  await load();
+  setInterval(()=>{if(!document.hidden)load().catch(()=>{})},30000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)load().catch(()=>{})});
+  return{
+    mode:"shared",email:session.user.email,
+    saveSale:(d,o)=>put("sale",d,o),
+    delSale:d=>del("sale",d),
+    addExp:o=>put("expense",uid(),o),
+    delExp:i=>del("expense",i),
+    addRec:o=>put("recurring",uid(),o),
+    updRec:(i,o)=>put("recurring",i,{...S.recurring[i],...o}),
+    delRec:i=>del("recurring",i),
+    saveSettings:()=>put("settings","main",{currency:S.settings.currency,rates:S.settings.rates})
+  };
+}
+function setStatus(t){$("status").textContent=t}
+
+/* ---------- render: P&L ---------- */
+let viewDate=today();
+function renderToday(){
+  $("dDate").value=viewDate;
+  const x=day(viewDate);
+  const L=(a,b,cls="")=>`<div class="row ${cls}"><span>${a}</span><span>${b}</span></div>`;
+  let h=`<div class="head"><b>${esc(nice(viewDate))}</b>Daily profit &amp; loss</div>`;
+  h+=L("Cash",fmt(x.cash))+L("Card",fmt(x.card));
+  for(const p of x.plats){
+    h+=L(esc(p.name)+" (gross)",fmt(p.gross));
+    if(p.gross)h+=L(`less ${p.rate}% commission`,fmt(-p.comm),"ind neg")+L("paid to you",fmt(p.net),"ind");
+  }
+  h+="<hr>"+L("Gross sales",fmt(x.gross))+L("Platform commission",fmt(-x.comm),"neg")+L("<b>Net sales</b>","<b>"+fmt(x.net)+"</b>");
+  h+="<hr>";
+  if(x.exps.length){for(const e of x.exps)h+=L(esc(e.supplier||e.category),fmt(-num(e.amount)),"neg")}
+  else h+=L("Supplier & day spend",fmt(0));
+  h+=L("Regular costs (daily share)",fmt(-x.fixed),"neg");
+  h+=`<hr><div class="row total ${x.profit>=0?"p":"l"}"><span>${x.profit>=0?"Profit":"Loss"}</span><span>${fmt(x.profit)}</span></div>`;
+  h+=`<div class="foot">${x.has?"":"No sales entered for this day yet · "}Food &amp; drink cost ${pct(x.food,x.gross)} of gross</div>`;
+  $("receipt").innerHTML=h;
+
+  const m=viewDate.slice(0,7), t=range(m+"-01",viewDate);
+  $("mtdTitle").textContent=monthName(m)+", up to "+parse(viewDate).toLocaleDateString("en-GB",{day:"numeric",month:"short"});
+  const C=(k,v,cls="",wide=false)=>`<div class="cell${wide?" wide":""}"><div class="k">${k}</div><div class="v ${cls}">${v}</div></div>`;
+  $("mtd").innerHTML=C("Net profit",fmt(t.profit),t.profit>=0?"p":"l",true)+C("Gross sales",fmt(t.gross))+C("Net sales",fmt(t.net))
+    +C("Commission paid",fmt(t.comm))+C("Supplier spend",fmt(t.spend))+C("Regular costs",fmt(t.fixed))+C("Food cost %",pct(t.food,t.gross));
+
+  // chart
+  const pts=[];for(let i=13;i>=0;i--){const d=addDays(viewDate,-i);pts.push([d,day(d).profit])}
+  const W=320,H=140,top=12,bot=22,maxA=Math.max(1,...pts.map(p=>Math.abs(p[1])));
+  const hasNeg=pts.some(p=>p[1]<0),hasPos=pts.some(p=>p[1]>0);
+  const zero=hasNeg&&hasPos?top+(H-top-bot)/2:hasNeg?top:H-bot;
+  const scale=(hasNeg&&hasPos?(H-top-bot)/2:(H-top-bot))/maxA, bw=W/14;
+  let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Daily profit for the 14 days to ${esc(nice(viewDate))}">`;
+  svg+=`<line x1="0" x2="${W}" y1="${zero}" y2="${zero}" stroke="var(--line)"/>`;
+  pts.forEach(([d,v],i)=>{const h2=Math.max(1,Math.abs(v)*scale),y=v>=0?zero-h2:zero;
+    svg+=`<rect x="${i*bw+3}" y="${y}" width="${bw-6}" height="${h2}" rx="2" fill="${v>=0?"var(--profit)":"var(--loss)"}" opacity="${d===viewDate?1:.7}"><title>${esc(short(d))}: ${esc(fmt(v))}</title></rect>`;
+    if(i%2===1||d===viewDate)svg+=`<text x="${i*bw+bw/2}" y="${H-6}" text-anchor="middle" font-size="9" fill="var(--muted)" font-family="var(--sans)">${parse(d).getDate()}</text>`});
+  svg+="</svg>";
+  $("chart").innerHTML=svg;
+}
+
+/* ---------- render: sales ---------- */
+function buildPlatFields(){
+  $("platFields").innerHTML=PLATFORMS.map(p=>`<div class="plat"><div class="plat-h">${p.name}<small id="rt-${p.id}"></small></div>
+    <label class="f" style="margin-bottom:6px"><span>Gross order value</span><div class="money cur"><input inputmode="decimal" id="s-${p.id}" placeholder="0.00"></div></label>
+    <div class="hint" id="h-${p.id}"></div></div>`).join("");
+  $("rateFields").innerHTML=PLATFORMS.map(p=>`<label class="f"><span>${p.name} commission %</span><input inputmode="decimal" id="rate-${p.id}"></label>`).join("");
+  PLATFORMS.forEach(p=>{
+    $("s-"+p.id).addEventListener("input",salesPreview);
+    $("rate-"+p.id).addEventListener("change",async e=>{S.settings.rates={...S.settings.rates,[p.id]:num(e.target.value)};await backend.saveSettings();toast(p.name+" rate saved")});
+  });
+}
+function loadSalesForm(){
+  const d=$("sDate").value, s=S.sales[d];
+  $("sCash").value=s&&s.cash?s.cash:""; $("sCard").value=s&&s.card?s.card:"";
+  PLATFORMS.forEach(p=>{$("s-"+p.id).value=s&&s[p.id]?s[p.id]:""});
+  $("sDel").hidden=!s;
+  $("sSave").textContent=(s?"Update":"Save")+" sales for "+short(d);
+  salesPreview();
+}
+function salesPreview(){
+  const d=$("sDate").value, s=S.sales[d], rates=(s&&s.rates)||S.settings.rates;
+  let net=num($("sCash").value)+num($("sCard").value), comm=0;
+  PLATFORMS.forEach(p=>{
+    const g=num($("s-"+p.id).value), r=num(rates[p.id]), c=r2(g*r/100);
+    $("rt-"+p.id).textContent=r+"% commission";
+    $("h-"+p.id).textContent=g?`− ${fmt(c)} commission = ${fmt(g-c)} to you`:"";
+    net+=g-c;comm+=c;
+  });
+}
+function renderSettings(){
+  PLATFORMS.forEach(p=>{const el=$("rate-"+p.id);if(document.activeElement!==el)el.value=S.settings.rates[p.id]??p.def});
+  $("curSel").value=cur();
+}
+
+/* ---------- render: spend ---------- */
+function renderSpend(){
+  const m=($("eDate").value||today()).slice(0,7);
+  $("spendTitle").textContent="Spend in "+monthName(m);
+  const list=Object.entries(S.expenses).filter(([,e])=>e.date&&e.date.startsWith(m)).sort((a,b)=>b[1].date.localeCompare(a[1].date)||(b[1].created||0)-(a[1].created||0));
+  const byCat={};list.forEach(([,e])=>{byCat[e.category]=(byCat[e.category]||0)+num(e.amount)});
+  const total=list.reduce((a,[,e])=>a+num(e.amount),0);
+  $("spendCats").innerHTML=`<div class="cell wide"><div class="k">Total</div><div class="v">${fmt(total)}</div></div>`+
+    Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([c,v])=>`<div class="cell"><div class="k">${esc(c)}</div><div class="v">${fmt(v)}</div></div>`).join("");
+  if(!list.length){$("spendList").innerHTML=`<li class="empty">No spend logged this month. Add your first supplier invoice above.</li>`;}
+  else{
+    let h="",last="";
+    for(const[id,e]of list){
+      if(e.date!==last){h+=`<li class="dayhead">${esc(nice(e.date))}</li>`;last=e.date}
+      h+=`<li><div class="grow"><div class="t">${esc(e.supplier||e.category)}</div><div class="m">${esc(e.category)}${e.note?" · "+esc(e.note):""}</div></div>
+        <div class="amt">${fmt(num(e.amount))}</div><button class="x" data-del-exp="${esc(id)}" aria-label="Delete ${esc(e.supplier||e.category)} ${esc(fmt(num(e.amount)))}">✕</button></li>`;
+    }
+    $("spendList").innerHTML=h;
+  }
+  const sups=[...new Set(Object.values(S.expenses).map(e=>e.supplier).filter(Boolean))].sort();
+  $("supList").innerHTML=sups.map(s=>`<option value="${esc(s)}">`).join("");
+}
+
+/* ---------- render: regular ---------- */
+function renderRegular(){
+  const items=Object.entries(S.recurring).sort((a,b)=>(a[1].name||"").localeCompare(b[1].name||""));
+  const perMonth=r=>r.freq==="weekly"?num(r.amount)*52/12:r.freq==="yearly"?num(r.amount)/12:num(r.amount);
+  const tm=items.reduce((a,[,r])=>a+perMonth(r),0);
+  $("recTotals").innerHTML=`<div class="cell"><div class="k">Per month</div><div class="v">${fmt(tm)}</div></div><div class="cell"><div class="k">Per day (this month)</div><div class="v">${fmt(dailyFixed(today()))}</div></div>`;
+  if(!items.length){$("recList").innerHTML=`<li class="empty">No regular costs yet. Add staff wages, rent and bills above.</li>`;return}
+  $("recList").innerHTML=items.map(([id,r])=>`<li><div class="grow"><div class="t">${esc(r.name)}</div><div class="m">${r.freq==="weekly"?"Weekly":r.freq==="yearly"?"Yearly":"Monthly"} · about ${fmt(perMonth(r)*12/365)} a day</div></div>
+    <input class="rec-amt" inputmode="decimal" value="${num(r.amount).toFixed(2)}" data-rec-amt="${esc(id)}" aria-label="${esc(r.name)} amount">
+    <button class="x" data-del-rec="${esc(id)}" aria-label="Delete ${esc(r.name)}">✕</button></li>`).join("");
+}
+
+/* ---------- render: report ---------- */
+function monthRows(m){
+  const last=m+"-"+pad(dim(m+"-01")), end=last<today()?last:today();
+  if(m+"-01">end)return range(m+"-01",addDays(m+"-01",-1));
+  return range(m+"-01",end);
+}
+function renderReport(){
+  const m=$("mSel").value||today().slice(0,7), t=monthRows(m);
+  const C=(k,v,cls="",wide=false)=>`<div class="cell${wide?" wide":""}"><div class="k">${k}</div><div class="v ${cls}">${v}</div></div>`;
+  const best=t.days.filter(([,x])=>x.has).sort((a,b)=>b[1].net-a[1].net)[0];
+  $("mSummary").innerHTML=C("Net profit, "+monthName(m),fmt(t.profit),t.profit>=0?"p":"l",true)+C("Net sales",fmt(t.net))+C("Commission",fmt(t.comm))
+    +C("Food cost %",pct(t.food,t.gross))+C("Best day",best?esc(short(best[0]))+" · "+fmt(best[1].net):"–");
+  let h=`<thead><tr><th>Day</th><th>Gross</th><th>Commission</th><th>Net sales</th><th>Spend</th><th>Regular</th><th>Profit</th></tr></thead><tbody>`;
+  if(!t.days.length)h+=`<tr><td colspan="7" class="empty">This month hasn't started yet.</td></tr>`;
+  for(const[d,x]of t.days)h+=`<tr><td>${esc(short(d))}</td><td>${fmt(x.gross)}</td><td>${fmt(x.comm)}</td><td>${fmt(x.net)}</td><td>${fmt(x.spend)}</td><td>${fmt(x.fixed)}</td><td class="${x.profit>=0?"p":"l"}">${fmt(x.profit)}</td></tr>`;
+  h+=`</tbody><tfoot><tr><td>Total</td><td>${fmt(t.gross)}</td><td>${fmt(t.comm)}</td><td>${fmt(t.net)}</td><td>${fmt(t.spend)}</td><td>${fmt(t.fixed)}</td><td class="${t.profit>=0?"p":"l"}">${fmt(t.profit)}</td></tr></tfoot>`;
+  $("mTable").innerHTML=h;
+}
+function csvFor(m){
+  const t=monthRows(m), q=v=>'"'+String(v).replace(/"/g,'""')+'"', n=v=>v.toFixed(2);
+  const head=["Date","Cash","Card",...PLATFORMS.flatMap(p=>[p.name+" gross",p.name+" commission"]),"Gross sales","Commission","Net sales","Supplier spend","Regular costs","Profit"];
+  const rows=[head.map(q).join(",")];
+  for(const[d,x]of t.days)rows.push([d,n(x.cash),n(x.card),...x.plats.flatMap(p=>[n(p.gross),n(p.comm)]),n(x.gross),n(x.comm),n(x.net),n(x.spend),n(x.fixed),n(x.profit)].join(","));
+  rows.push("",[q("Spend detail")].join(","),["Date","Category","Supplier","Amount","Note"].map(q).join(","));
+  Object.values(S.expenses).filter(e=>e.date&&e.date.startsWith(m)).sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>rows.push([e.date,q(e.category),q(e.supplier||""),n(num(e.amount)),q(e.note||"")].join(",")));
+  return rows.join("\n");
+}
+
+/* ---------- master render ---------- */
+function applyCurrency(){document.querySelectorAll(".cur").forEach(el=>el.setAttribute("data-cur",cur()))}
+function render(){renderToday();renderSettings();salesPreview();renderSpend();renderRegular();renderReport()}
+
+/* ---------- events ---------- */
+document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("nav.tabs button").forEach(x=>x.removeAttribute("aria-current"));
+  b.setAttribute("aria-current","page");
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.id==="t-"+b.dataset.tab));
+  window.scrollTo(0,0);
+  if(b.dataset.tab==="sales")loadSalesForm();
+}));
+$("dPrev").onclick=()=>{viewDate=addDays(viewDate,-1);renderToday()};
+$("dNext").onclick=()=>{viewDate=addDays(viewDate,1);renderToday()};
+$("dDate").onchange=e=>{if(e.target.value){viewDate=e.target.value;renderToday()}};
+
+$("sDate").onchange=loadSalesForm;
+["sCash","sCard"].forEach(i=>$(i).addEventListener("input",salesPreview));
+$("sSave").onclick=async()=>{
+  const d=$("sDate").value;if(!d)return toast("Pick a date first");
+  const o={date:d,cash:r2(num($("sCash").value)),card:r2(num($("sCard").value)),rates:{...(S.sales[d]&&S.sales[d].rates||S.settings.rates)},updated:Date.now()};
+  PLATFORMS.forEach(p=>o[p.id]=r2(num($("s-"+p.id).value)));
+  $("sSave").disabled=true;
+  try{await backend.saveSale(d,o);toast("Sales saved for "+short(d));viewDate=d}catch(e){}
+  $("sSave").disabled=false;$("sDel").hidden=false;$("sSave").textContent="Update sales for "+short(d);
+};
+$("sDel").onclick=async()=>{const d=$("sDate").value;if(!confirm("Clear all sales for "+nice(d)+"?"))return;try{await backend.delSale(d);toast("Sales cleared");loadSalesForm()}catch(e){}};
+$("curSel").onchange=async e=>{S.settings.currency=e.target.value;applyCurrency();await backend.saveSettings();render()};
+
+$("eCat").innerHTML=CATS.map(c=>`<option>${c}</option>`).join("");
+$("eDate").onchange=renderSpend;
+$("eAdd").onclick=async()=>{
+  const amt=r2(num($("eAmt").value));if(!amt)return toast("Enter an amount");
+  const o={date:$("eDate").value||today(),category:$("eCat").value,supplier:$("eSup").value.trim(),amount:amt,note:$("eNote").value.trim(),created:Date.now()};
+  $("eAdd").disabled=true;
+  try{await backend.addExp(o);toast("Spend added");$("eAmt").value="";$("eNote").value="";$("eSup").value=""}catch(e){}
+  $("eAdd").disabled=false;
+};
+$("spendList").addEventListener("click",async e=>{const b=e.target.closest("[data-del-exp]");if(!b)return;if(!confirm("Delete this spend?"))return;try{await backend.delExp(b.dataset.delExp);toast("Spend deleted")}catch(e){}});
+
+$("rAdd").onclick=async()=>{
+  const name=$("rName").value.trim(),amt=r2(num($("rAmt").value));
+  if(!name)return toast("Name the cost");if(!amt)return toast("Enter an amount");
+  try{await backend.addRec({name,amount:amt,freq:$("rFreq").value,created:Date.now()});toast(name+" added");$("rName").value="";$("rAmt").value=""}catch(e){}
+};
+$("recList").addEventListener("click",async e=>{const b=e.target.closest("[data-del-rec]");if(!b)return;if(!confirm("Delete this regular cost?"))return;try{await backend.delRec(b.dataset.delRec);toast("Regular cost deleted")}catch(e){}});
+$("recList").addEventListener("change",async e=>{const i=e.target.closest("[data-rec-amt]");if(!i)return;try{await backend.updRec(i.dataset.recAmt,{amount:r2(num(i.value))});toast("Amount updated")}catch(e){}});
+
+$("mSel").onchange=renderReport;
+$("csvBtn").onclick=async()=>{
+  const m=$("mSel").value||today().slice(0,7);
+  if(!downloads)return;
+  try{await downloads.save({filename:"pnl-"+m+".csv",data:csvFor(m)});toast("CSV saved")}
+  catch(e){if(e&&e.code!=="declined")toast("Couldn't export the CSV")}
+};
+
+/* ---------- boot ---------- */
+buildPlatFields();
+$("sDate").value=today();$("eDate").value=today();$("mSel").value=today().slice(0,7);
+backend=localBackend();applyCurrency();render();loadSalesForm();
+setStatus("Saved on this device only");
+(async()=>{
+  try{
+    let cloud=await supaBackend();
+    if(cloud){
+      backend=cloud;render();loadSalesForm();setStatus("Shared with your team · signed in as "+cloud.email);
+    }else{
+      cloud=await dbBackend();
+      if(cloud){backend=cloud;render();loadSalesForm();setStatus("Saved to your account · private to you")}
+    }
+  }catch(e){setStatus("Couldn't connect to the shared database. Changes are saved on this device only.")}
+  try{
+    if(window.claude&&window.claude.use){downloads=await window.claude.use("downloads")}
+  }catch(e){}
+  if(!downloads){
+    downloads={save:async({filename,data})=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:"text/csv"}));a.download=filename;document.body.appendChild(a);a.click();a.remove()}};
+  }
+  $("csvBtn").hidden=false;
+})();
+})();
+</script>
+</body>
+</html>
