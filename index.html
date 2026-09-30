@@ -361,7 +361,7 @@ async function supaBackend(){
       $("loginForm").onsubmit=async e=>{
         e.preventDefault();$("loginErr").textContent="";
         const {data,error}=await sb.auth.signInWithPassword({email:$("lEmail").value.trim(),password:$("lPass").value});
-        if(error){$("loginErr").textContent="Wrong email or password.";return}
+        if(error){$("loginErr").textContent=error.message;return}
         box.hidden=true;$("lPass").value="";res(data.session);
       };
     });
