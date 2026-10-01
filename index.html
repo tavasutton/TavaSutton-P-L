@@ -43,8 +43,8 @@ button{cursor:pointer}
 /* Bottom nav */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);
   padding-bottom:env(safe-area-inset-bottom,0px);z-index:10}
-nav.tabs .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
-nav.tabs button{background:none;border:0;padding:10px 2px 12px;font-size:.78rem;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.tabs .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr)}
+nav.tabs button{background:none;border:0;padding:10px 1px 12px;font-size:.72rem;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px}
 nav.tabs button .ic{font-size:1.2rem;line-height:1}
 nav.tabs button[aria-current="page"]{color:var(--ink);font-weight:700}
 nav.tabs button[aria-current="page"] .ic{transform:translateY(-1px)}
@@ -126,6 +126,24 @@ tfoot td{font-weight:800;border-bottom:0;border-top:2px solid var(--ink)}
 .row-actions{display:flex;gap:8px;margin:12px 0}
 .row-actions input{flex:1;height:44px;border:1px solid var(--line);border-radius:8px;background:var(--field);padding:0 10px}
 .row-actions .btn{width:auto;padding:0 16px;height:44px}
+.remind{background:var(--surface);border:1px solid var(--accent);border-left:6px solid var(--accent);border-radius:10px;padding:10px 12px;margin:12px 0 0}
+.remind b{display:block}
+.remind .m{font-size:.85rem;color:var(--muted)}
+.remind+.remind{margin-top:8px}
+.pill{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);margin-left:6px;vertical-align:middle}
+.pill.confirmed{border-color:var(--profit);color:var(--profit)}
+.pill.enquiry{border-color:var(--accent);color:var(--ink)}
+.pill.cancelled{text-decoration:line-through}
+.ev{display:block;width:100%;text-align:left;background:none;border:0;padding:12px 0;border-bottom:1px solid var(--line)}
+.ev:last-child{border-bottom:0}
+.ev .t{font-weight:700}
+.ev .m{font-size:.84rem;color:var(--muted)}
+.ev .soon{color:var(--loss);font-weight:700}
+textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:8px;background:var(--field);padding:10px 12px;font:inherit;color:inherit;resize:vertical}
+.evsum{font-family:var(--mono);font-size:.84rem;background:var(--paper);border:1px dashed var(--line);border-radius:8px;padding:10px 12px;margin-bottom:12px}
+.evsum .row{display:flex;justify-content:space-between}
+.linkbtn{display:flex;align-items:center;justify-content:center;width:100%;height:44px;border:1px solid var(--line);border-radius:10px;color:var(--ink);text-decoration:none;font-weight:600;margin-top:8px}
+details summary{cursor:pointer;font-weight:700;padding:8px 0}
 #login{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
 #login[hidden]{display:none}
 #login form{width:100%;max-width:360px}
@@ -139,10 +157,15 @@ tfoot td{font-weight:800;border-bottom:0;border-top:2px solid var(--ink)}
     <h1 id="appTitle">Daily P&amp;L</h1>
     <p class="status" id="status">Loading your books…</p>
     <button type="button" id="outBtn" hidden>Sign out</button>
+    <div class="card" id="migrate" hidden style="margin-top:12px;border-color:var(--accent)">
+      <p id="migText" style="margin:0 0 10px"></p>
+      <button class="btn" type="button" id="migBtn">Move my entries to the shared books</button>
+    </div>
   </header>
 
   <!-- TODAY -->
   <section class="tab on" id="t-today" aria-label="Daily profit and loss">
+    <div id="reminders"></div>
     <div class="stepper">
       <button type="button" id="dPrev" aria-label="Previous day">‹</button>
       <input type="date" id="dDate" aria-label="Day to view">
@@ -164,6 +187,11 @@ tfoot td{font-weight:800;border-bottom:0;border-top:2px solid var(--ink)}
         <label class="f"><span>Cash</span><div class="money cur"><input inputmode="decimal" id="sCash" placeholder="0.00"></div></label>
         <label class="f"><span>Card</span><div class="money cur"><input inputmode="decimal" id="sCard" placeholder="0.00"></div></label>
       </div>
+      <div class="plat"><div class="plat-h">Parties, stalls &amp; events<small>no commission</small></div>
+      <div class="two">
+        <label class="f"><span>Cash</span><div class="money cur"><input inputmode="decimal" id="sEvCash" placeholder="0.00"></div></label>
+        <label class="f"><span>Card</span><div class="money cur"><input inputmode="decimal" id="sEvCard" placeholder="0.00"></div></label>
+      </div></div>
       <div id="platFields"></div>
       <button class="btn" type="button" id="sSave">Save sales</button>
       <button class="btn ghost" type="button" id="sDel" hidden>Clear this day's sales</button>
@@ -206,13 +234,57 @@ tfoot td{font-weight:800;border-bottom:0;border-top:2px solid var(--ink)}
       </datalist>
       <div class="two">
         <label class="f"><span>Amount</span><div class="money cur"><input inputmode="decimal" id="rAmt" placeholder="0.00"></div></label>
-        <label class="f"><span>Paid</span><select id="rFreq"><option value="monthly">Monthly</option><option value="weekly">Weekly</option><option value="yearly">Yearly</option></select></label>
+        <label class="f"><span>Paid</span><select id="rFreq"><option value="monthly">Monthly</option><option value="weekly">Weekly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option></select></label>
       </div>
       <button class="btn" type="button" id="rAdd">Add regular cost</button>
     </div>
     <h2>Your regular costs</h2>
     <div class="grid" id="recTotals" style="margin-bottom:10px"></div>
     <div class="card"><ul class="list" id="recList"></ul></div>
+  </section>
+
+  <!-- EVENTS -->
+  <section class="tab" id="t-events" aria-label="Events and parties">
+    <p class="sub">Parties, stalls and catering jobs you've booked. Upcoming events show as reminders on the P&amp;L screen.</p>
+    <div class="card" style="margin-top:14px" id="evForm">
+      <h2 style="margin-top:0" id="evFormTitle">New event</h2>
+      <label class="f"><span>Event or client name</span><input id="evTitle" placeholder="e.g. Sharma 50th birthday"></label>
+      <div class="two">
+        <label class="f"><span>Type</span><select id="evType"><option>Private party</option><option>Stall / market</option><option>Outside catering</option><option>Corporate</option><option>Other</option></select></label>
+        <label class="f"><span>Status</span><select id="evStatus"><option value="enquiry">Enquiry</option><option value="confirmed">Confirmed</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></label>
+      </div>
+      <div class="two">
+        <label class="f"><span>Date</span><input type="date" id="evDate"></label>
+        <label class="f"><span>Number of people</span><input inputmode="numeric" id="evGuests" placeholder="0"></label>
+      </div>
+      <div class="two">
+        <label class="f"><span>Start time</span><input type="time" id="evStart"></label>
+        <label class="f"><span>End time</span><input type="time" id="evEnd"></label>
+      </div>
+      <label class="f"><span>Address / venue</span><input id="evAddr" placeholder="Venue name, street, postcode"></label>
+      <div class="two">
+        <label class="f"><span>Contact name</span><input id="evContact"></label>
+        <label class="f"><span>Contact phone</span><input type="tel" id="evPhone"></label>
+      </div>
+      <div class="two">
+        <label class="f"><span>Price charged</span><div class="money cur"><input inputmode="decimal" id="evPrice" placeholder="0.00"></div></label>
+        <label class="f"><span>Deposit received</span><div class="money cur"><input inputmode="decimal" id="evDeposit" placeholder="0.00"></div></label>
+      </div>
+      <div class="two">
+        <label class="f"><span>Estimated food cost</span><div class="money cur"><input inputmode="decimal" id="evFood" placeholder="0.00"></div></label>
+        <label class="f"><span>Estimated staff &amp; other</span><div class="money cur"><input inputmode="decimal" id="evOther" placeholder="0.00"></div></label>
+      </div>
+      <label class="f"><span>Remind me</span><select id="evRemind"><option value="1">1 day before</option><option value="3">3 days before</option><option value="7" selected>1 week before</option><option value="14">2 weeks before</option></select></label>
+      <label class="f"><span>Menu, dietary needs, notes</span><textarea id="evNotes"></textarea></label>
+      <div class="evsum" id="evCalc"></div>
+      <button class="btn" type="button" id="evSave">Save event</button>
+      <a class="linkbtn" id="evCal" target="_blank" rel="noopener" hidden>Add to Google Calendar</a>
+      <button class="btn ghost" type="button" id="evCancelEdit" hidden>New event instead</button>
+      <button class="btn ghost" type="button" id="evDelete" hidden>Delete event</button>
+    </div>
+    <h2>Upcoming</h2>
+    <div class="card" id="evUpcoming"></div>
+    <details style="margin-top:14px"><summary>Past and cancelled</summary><div class="card" id="evPast"></div></details>
   </section>
 
   <!-- REPORT -->
@@ -232,6 +304,7 @@ tfoot td{font-weight:800;border-bottom:0;border-top:2px solid var(--ink)}
   <button data-tab="sales"><span class="ic">💷</span>Sales</button>
   <button data-tab="spend"><span class="ic">🧺</span>Spend</button>
   <button data-tab="regular"><span class="ic">🔁</span>Regular</button>
+  <button data-tab="events"><span class="ic">🎉</span>Events</button>
   <button data-tab="report"><span class="ic">📅</span>Report</button>
 </div></nav>
 <div id="login" hidden><form class="card" id="loginForm">
@@ -254,7 +327,7 @@ const LKEY="rpnl-books-v1";
 /* ---- Shared database (Supabase). Paste your two values from Project Settings -> API ---- */
 const SB_URL="https://mlcnzviutgxetdzxtghp.supabase.co", SB_KEY="sb_publishable_DTHKwAKafwNYzNv0UxiTCQ_W0o6QAgo";
 
-const S={settings:{currency:"£",rates:{uber:30,deliveroo:30,justeat:14}},sales:{},expenses:{},recurring:{}};
+const S={settings:{currency:"£",rates:{uber:30,deliveroo:30,justeat:14}},sales:{},expenses:{},recurring:{},events:{}};
 let backend=null, downloads=null;
 
 /* ---------- utils ---------- */
@@ -283,6 +356,7 @@ function dailyFixed(dateStr){
   for(const r of Object.values(S.recurring)){
     const a=num(r.amount);
     if(r.freq==="weekly")t+=a/7;
+    else if(r.freq==="quarterly")t+=a*4/365;
     else if(r.freq==="yearly")t+=a/365;
     else t+=a/dim(dateStr);
   }
@@ -291,15 +365,15 @@ function dailyFixed(dateStr){
 function day(dateStr){
   const s=S.sales[dateStr]||{};
   const rates=s.rates||S.settings.rates;
-  const cash=num(s.cash), card=num(s.card);
+  const cash=num(s.cash), card=num(s.card), evCash=num(s.evCash), evCard=num(s.evCard);
   const plats=PLATFORMS.map(p=>{const g=num(s[p.id]),rate=num(rates[p.id]),c=r2(g*rate/100);return{...p,gross:g,rate,comm:c,net:g-c}});
   const platGross=plats.reduce((a,p)=>a+p.gross,0), comm=plats.reduce((a,p)=>a+p.comm,0);
-  const gross=cash+card+platGross, net=gross-comm;
+  const gross=cash+card+evCash+evCard+platGross, net=gross-comm;
   const exps=Object.values(S.expenses).filter(e=>e.date===dateStr);
   const spend=exps.reduce((a,e)=>a+num(e.amount),0);
   const food=exps.filter(e=>FOODCATS.includes(e.category)).reduce((a,e)=>a+num(e.amount),0);
   const fixed=dailyFixed(dateStr);
-  return{has:!!S.sales[dateStr],cash,card,plats,platGross,comm,gross,net,exps,spend,food,fixed,profit:net-spend-fixed};
+  return{has:!!S.sales[dateStr],cash,card,evCash,evCard,plats,platGross,comm,gross,net,exps,spend,food,fixed,profit:net-spend-fixed};
 }
 function range(from,to){
   const t={gross:0,comm:0,net:0,spend:0,food:0,fixed:0,profit:0,days:[]};
@@ -309,7 +383,7 @@ function range(from,to){
 
 /* ---------- storage backends ---------- */
 function localBackend(){
-  try{const raw=localStorage.getItem(LKEY);if(raw){const o=JSON.parse(raw);Object.assign(S,{settings:{...S.settings,...o.settings},sales:o.sales||{},expenses:o.expenses||{},recurring:o.recurring||{}})}}catch(e){}
+  try{const raw=localStorage.getItem(LKEY);if(raw){const o=JSON.parse(raw);Object.assign(S,{settings:{...S.settings,...o.settings},sales:o.sales||{},expenses:o.expenses||{},recurring:o.recurring||{},events:o.events||{}})}}catch(e){}
   const persist=()=>{try{localStorage.setItem(LKEY,JSON.stringify(S))}catch(e){toast("Couldn't save on this device")}};
   return{
     mode:"local",
@@ -320,26 +394,29 @@ function localBackend(){
     addRec:async o=>{S.recurring[uid()]=o;persist();render()},
     updRec:async(id,o)=>{S.recurring[id]={...S.recurring[id],...o};persist();render()},
     delRec:async id=>{delete S.recurring[id];persist();render()},
+    addEv:async o=>{const i=uid();S.events[i]=o;persist();render();return i},
+    updEv:async(id,o)=>{S.events[id]=o;persist();render()},
+    delEv:async id=>{delete S.events[id];persist();render()},
     saveSettings:async()=>{persist();render()}
   };
 }
 async function dbBackend(){
   if(!window.claude||!window.claude.use)return null;
   const [db,user]=await Promise.all([window.claude.use("db"),window.claude.use("user")]);
-  if(!db||!user)return null;
-  const id=await user.id(); if(!id)return null;
-  const base="data/users/"+id;
-  S.sales={};S.expenses={};S.recurring={};
-  const books=db.doc(base+"/books"), setDoc=db.doc(base+"/settings");
-  const sales=books.collection("sales"), exps=books.collection("expenses"), recs=books.collection("recurring");
+  if(!db)return null;
+  S.sales={};S.expenses={};S.recurring={};S.events={};
+  /* One shared set of books for everyone the artifact is shared with */
+  const books=db.doc("books/main"), setDoc=db.doc("books/settings");
+  const sales=books.collection("sales"), exps=books.collection("expenses"), recs=books.collection("recurring"), evs=books.collection("events");
   const toMap=snap=>{const m={};snap.docs.forEach(d=>{m[d.id]=d.data()});return m};
   const onErr=e=>{setStatus("Sync problem: "+(e&&e.message||"unknown")+". Changes may not save.")};
   sales.limit(1000).onSnapshot(s=>{S.sales=toMap(s);render()},onErr);
   exps.orderBy("date","desc").limit(1000).onSnapshot(s=>{S.expenses=toMap(s);render()},onErr);
   recs.limit(200).onSnapshot(s=>{S.recurring=toMap(s);render()},onErr);
+  evs.orderBy("date","desc").limit(500).onSnapshot(s=>{S.events=toMap(s);render()},onErr);
   setDoc.onSnapshot(s=>{if(s.exists){S.settings={...S.settings,...s.data()};applyCurrency();render()}},onErr);
-  const w=p=>p.catch(e=>{toast(e&&e.code==="invalid_argument"?"You don't have permission to save here":"Couldn't save. Try again.");throw e});
-  return{
+  const w=p=>p.catch(e=>{toast(e&&e.code==="invalid_argument"?"You have view-only access, so this can't be saved":"Couldn't save. Try again.");throw e});
+  const be={
     mode:"cloud",
     saveSale:(d,o)=>w(sales.doc(d).set(o)),
     delSale:d=>w(sales.doc(d).delete()),
@@ -348,7 +425,59 @@ async function dbBackend(){
     addRec:o=>w(recs.add(o)),
     updRec:(i,o)=>w(recs.doc(i).update(o)),
     delRec:i=>w(recs.doc(i).delete()),
+    addEv:o=>w(evs.add(o)).then(r=>r&&r.id),
+    updEv:(i,o)=>w(evs.doc(i).set(o)),
+    delEv:i=>w(evs.doc(i).delete()),
     saveSettings:()=>w(setDoc.set({currency:S.settings.currency,rates:S.settings.rates}))
+  };
+  /* Find entries saved by the earlier private-per-person version, or on this device only */
+  setTimeout(()=>findOldEntries(db,user,{books,setDoc,sales,exps,recs}),0);
+  return be;
+}
+async function findOldEntries(db,user,shared){
+  const found={sales:{},expenses:{},recurring:{},settings:null,cleanups:[]};
+  try{
+    const id=user?await user.id():null;
+    if(id){
+      const pb=db.doc("data/users/"+id+"/books");
+      for(const k of["sales","expenses","recurring"]){
+        const snap=await pb.collection(k).limit(1000).get();
+        snap.docs.forEach(d=>{found[k][d.id]=d.data();found.cleanups.push(pb.collection(k).doc(d.id))});
+      }
+      const ps=await db.doc("data/users/"+id+"/settings").get();
+      if(ps.exists)found.settings=ps.data();
+    }
+  }catch(e){}
+  let local=null;
+  try{const raw=localStorage.getItem(LKEY);if(raw)local=JSON.parse(raw)}catch(e){}
+  if(local){
+    for(const k of["sales","expenses","recurring"])Object.assign(found[k],local[k]||{});
+    if(!found.settings&&local.settings)found.settings=local.settings;
+  }
+  const count=Object.keys(found.sales).length+Object.keys(found.expenses).length+Object.keys(found.recurring).length;
+  if(!count)return;
+  let canWrite=true;try{if(user&&user.can&&(await user.can("data.write"))===false)canWrite=false}catch(e){}
+  const bar=$("migrate");
+  bar.hidden=false;
+  if(!canWrite){$("migText").textContent=`${count} entries were saved privately under your login before the books became shared. Ask the owner for "Can edit" access to move them in.`;$("migBtn").hidden=true;return}
+  $("migText").textContent=`${count} entries (${Object.keys(found.sales).length} sales days, ${Object.keys(found.expenses).length} spends, ${Object.keys(found.recurring).length} regular costs) were saved privately under your login before the books became shared. Move them in so everyone sees them.`;
+  $("migBtn").onclick=async()=>{
+    $("migBtn").disabled=true;$("migBtn").textContent="Moving…";
+    try{
+      for(const[d,o]of Object.entries(found.sales)){
+        const cur=await shared.sales.doc(d).get();
+        if(!cur.exists||(num(o.updated)>num(cur.data().updated)))await shared.sales.doc(d).set(o);
+      }
+      for(const[i,o]of Object.entries(found.expenses))await shared.exps.doc(i).set(o);
+      for(const[i,o]of Object.entries(found.recurring))await shared.recs.doc(i).set(o);
+      if(found.settings){const cs=await shared.setDoc.get();if(!cs.exists)await shared.setDoc.set({currency:found.settings.currency||"£",rates:found.settings.rates||S.settings.rates})}
+      for(const ref of found.cleanups){try{await ref.delete()}catch(e){}}
+      try{localStorage.removeItem(LKEY)}catch(e){}
+      bar.hidden=true;toast("Entries moved into the shared books");
+    }catch(e){
+      $("migBtn").disabled=false;$("migBtn").textContent="Try again";
+      toast(e&&e.code==="invalid_argument"?"You need \"Can edit\" access to move entries":"Couldn't move everything. Try again.");
+    }
   };
 }
 async function supaBackend(){
@@ -376,11 +505,12 @@ async function supaBackend(){
       rows.push(...data);
       if(data.length<1000)break;
     }
-    S.sales={};S.expenses={};S.recurring={};
+    S.sales={};S.expenses={};S.recurring={};S.events={};
     for(const r of rows){
       if(r.kind==="sale")S.sales[r.id]=r.data;
       else if(r.kind==="expense")S.expenses[r.id]=r.data;
       else if(r.kind==="recurring")S.recurring[r.id]=r.data;
+      else if(r.kind==="event")S.events[r.id]=r.data;
       else if(r.kind==="settings")S.settings={...S.settings,...r.data};
     }
     applyCurrency();render();
@@ -400,6 +530,9 @@ async function supaBackend(){
     addRec:o=>put("recurring",uid(),o),
     updRec:(i,o)=>put("recurring",i,{...S.recurring[i],...o}),
     delRec:i=>del("recurring",i),
+    addEv:async o=>{const i=uid();await put("event",i,o);return i},
+    updEv:(i,o)=>put("event",i,o),
+    delEv:i=>del("event",i),
     saveSettings:()=>put("settings","main",{currency:S.settings.currency,rates:S.settings.rates})
   };
 }
@@ -413,6 +546,7 @@ function renderToday(){
   const L=(a,b,cls="")=>`<div class="row ${cls}"><span>${a}</span><span>${b}</span></div>`;
   let h=`<div class="head"><b>${esc(nice(viewDate))}</b>Daily profit &amp; loss</div>`;
   h+=L("Cash",fmt(x.cash))+L("Card",fmt(x.card));
+  if(x.evCash||x.evCard)h+=L("Events cash",fmt(x.evCash))+L("Events card",fmt(x.evCard));
   for(const p of x.plats){
     h+=L(esc(p.name)+" (gross)",fmt(p.gross));
     if(p.gross)h+=L(`less ${p.rate}% commission`,fmt(-p.comm),"ind neg")+L("paid to you",fmt(p.net),"ind");
@@ -461,6 +595,7 @@ function buildPlatFields(){
 function loadSalesForm(){
   const d=$("sDate").value, s=S.sales[d];
   $("sCash").value=s&&s.cash?s.cash:""; $("sCard").value=s&&s.card?s.card:"";
+  $("sEvCash").value=s&&s.evCash?s.evCash:""; $("sEvCard").value=s&&s.evCard?s.evCard:"";
   PLATFORMS.forEach(p=>{$("s-"+p.id).value=s&&s[p.id]?s[p.id]:""});
   $("sDel").hidden=!s;
   $("sSave").textContent=(s?"Update":"Save")+" sales for "+short(d);
@@ -507,11 +642,11 @@ function renderSpend(){
 /* ---------- render: regular ---------- */
 function renderRegular(){
   const items=Object.entries(S.recurring).sort((a,b)=>(a[1].name||"").localeCompare(b[1].name||""));
-  const perMonth=r=>r.freq==="weekly"?num(r.amount)*52/12:r.freq==="yearly"?num(r.amount)/12:num(r.amount);
+  const perMonth=r=>r.freq==="weekly"?num(r.amount)*52/12:r.freq==="quarterly"?num(r.amount)/3:r.freq==="yearly"?num(r.amount)/12:num(r.amount);
   const tm=items.reduce((a,[,r])=>a+perMonth(r),0);
   $("recTotals").innerHTML=`<div class="cell"><div class="k">Per month</div><div class="v">${fmt(tm)}</div></div><div class="cell"><div class="k">Per day (this month)</div><div class="v">${fmt(dailyFixed(today()))}</div></div>`;
   if(!items.length){$("recList").innerHTML=`<li class="empty">No regular costs yet. Add staff wages, rent and bills above.</li>`;return}
-  $("recList").innerHTML=items.map(([id,r])=>`<li><div class="grow"><div class="t">${esc(r.name)}</div><div class="m">${r.freq==="weekly"?"Weekly":r.freq==="yearly"?"Yearly":"Monthly"} · about ${fmt(perMonth(r)*12/365)} a day</div></div>
+  $("recList").innerHTML=items.map(([id,r])=>`<li><div class="grow"><div class="t">${esc(r.name)}</div><div class="m">${({weekly:"Weekly",quarterly:"Quarterly",yearly:"Yearly"})[r.freq]||"Monthly"} · about ${fmt(perMonth(r)*12/365)} a day</div></div>
     <input class="rec-amt" inputmode="decimal" value="${num(r.amount).toFixed(2)}" data-rec-amt="${esc(id)}" aria-label="${esc(r.name)} amount">
     <button class="x" data-del-rec="${esc(id)}" aria-label="Delete ${esc(r.name)}">✕</button></li>`).join("");
 }
@@ -536,17 +671,88 @@ function renderReport(){
 }
 function csvFor(m){
   const t=monthRows(m), q=v=>'"'+String(v).replace(/"/g,'""')+'"', n=v=>v.toFixed(2);
-  const head=["Date","Cash","Card",...PLATFORMS.flatMap(p=>[p.name+" gross",p.name+" commission"]),"Gross sales","Commission","Net sales","Supplier spend","Regular costs","Profit"];
+  const head=["Date","Cash","Card","Events cash","Events card",...PLATFORMS.flatMap(p=>[p.name+" gross",p.name+" commission"]),"Gross sales","Commission","Net sales","Supplier spend","Regular costs","Profit"];
   const rows=[head.map(q).join(",")];
-  for(const[d,x]of t.days)rows.push([d,n(x.cash),n(x.card),...x.plats.flatMap(p=>[n(p.gross),n(p.comm)]),n(x.gross),n(x.comm),n(x.net),n(x.spend),n(x.fixed),n(x.profit)].join(","));
+  for(const[d,x]of t.days)rows.push([d,n(x.cash),n(x.card),n(x.evCash),n(x.evCard),...x.plats.flatMap(p=>[n(p.gross),n(p.comm)]),n(x.gross),n(x.comm),n(x.net),n(x.spend),n(x.fixed),n(x.profit)].join(","));
   rows.push("",[q("Spend detail")].join(","),["Date","Category","Supplier","Amount","Note"].map(q).join(","));
   Object.values(S.expenses).filter(e=>e.date&&e.date.startsWith(m)).sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>rows.push([e.date,q(e.category),q(e.supplier||""),n(num(e.amount)),q(e.note||"")].join(",")));
   return rows.join("\n");
 }
 
+/* ---------- events ---------- */
+const EVF=["Title","Type","Status","Date","Guests","Start","End","Addr","Contact","Phone","Price","Deposit","Food","Other","Remind","Notes"];
+let editingEv=null;
+const daysUntil=d=>Math.round((parse(d)-parse(today()))/864e5);
+const whenTxt=n=>n===0?"Today":n===1?"Tomorrow":n<0?(-n)+" days ago":"In "+n+" days";
+function evRead(){
+  const v=k=>$("ev"+k).value;
+  return{title:v("Title").trim(),type:v("Type"),status:v("Status"),date:v("Date"),guests:Math.round(num(v("Guests"))),start:v("Start"),end:v("End"),
+    address:v("Addr").trim(),contact:v("Contact").trim(),phone:v("Phone").trim(),price:r2(num(v("Price"))),deposit:r2(num(v("Deposit"))),
+    food:r2(num(v("Food"))),other:r2(num(v("Other"))),remind:Math.round(num(v("Remind")))||7,notes:v("Notes").trim()};
+}
+function evFill(e){
+  e=e||{};const set=(k,val)=>{$("ev"+k).value=val??""};
+  set("Title",e.title);set("Type",e.type||"Private party");set("Status",e.status||"confirmed");set("Date",e.date||today());
+  set("Guests",e.guests||"");set("Start",e.start);set("End",e.end);set("Addr",e.address);set("Contact",e.contact);set("Phone",e.phone);
+  set("Price",e.price||"");set("Deposit",e.deposit||"");set("Food",e.food||"");set("Other",e.other||"");set("Remind",String(e.remind||7));set("Notes",e.notes);
+  evCalc();
+}
+function evCalc(){
+  const e=evRead(), cost=e.food+e.other, bal=e.price-e.deposit, prof=e.price-cost;
+  $("evCalc").innerHTML=`<div class="row"><span>Balance due</span><span>${fmt(bal)}</span></div>
+    <div class="row"><span>Estimated profit</span><span class="${prof>=0?"p":"l"}">${fmt(prof)}</span></div>
+    <div class="row"><span>Price per head</span><span>${e.guests?fmt(e.price/e.guests):"–"}</span></div>
+    <div class="row"><span>Cost per head</span><span>${e.guests?fmt(cost/e.guests):"–"}</span></div>`;
+  const cal=$("evCal");
+  if(e.title&&e.date){
+    const d=e.date.replace(/-/g,""), t=x=>x?x.replace(":","")+"00":"";
+    let dates=d+"/"+d.slice(0,8);
+    if(e.start){const endT=e.end||e.start;dates=d+"T"+t(e.start)+"/"+d+"T"+t(endT)}
+    else{const n=parse(e.date);n.setDate(n.getDate()+1);dates=d+"/"+iso(n).replace(/-/g,"")}
+    const details=[e.type,e.guests?e.guests+" people":"",e.contact?("Contact: "+e.contact+" "+e.phone).trim():"","Price "+fmt(e.price)+", deposit "+fmt(e.deposit)+", balance "+fmt(bal),e.notes].filter(Boolean).join("\n");
+    cal.href="https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(e.title)+"&dates="+dates+"&details="+encodeURIComponent(details)+"&location="+encodeURIComponent(e.address);
+    cal.hidden=false;
+  }else cal.hidden=true;
+}
+function evItem(id,e){
+  const n=daysUntil(e.date), bal=num(e.price)-num(e.deposit);
+  const soon=n>=0&&n<=num(e.remind||7)&&e.status!=="cancelled";
+  return `<button class="ev" type="button" data-ev="${esc(id)}"><div class="t">${esc(e.title||"Untitled event")}<span class="pill ${esc(e.status)}">${esc(e.status||"")}</span></div>
+    <div class="m"><span class="${soon?"soon":""}">${esc(whenTxt(n))}</span> · ${esc(nice(e.date))}${e.start?" · "+esc(e.start):""}</div>
+    <div class="m">${esc(e.type||"")}${e.guests?" · "+e.guests+" people":""}${e.address?" · "+esc(e.address):""}</div>
+    <div class="m">${fmt(num(e.price))}${bal>0&&e.status!=="cancelled"?" · <b>"+fmt(bal)+" balance due</b>":""}</div></button>`;
+}
+function renderEvents(){
+  const all=Object.entries(S.events).filter(([,e])=>e&&e.date);
+  const up=all.filter(([,e])=>daysUntil(e.date)>=0&&e.status!=="cancelled"&&e.status!=="completed").sort((a,b)=>a[1].date.localeCompare(b[1].date)||(a[1].start||"").localeCompare(b[1].start||""));
+  const past=all.filter(x=>!up.includes(x)).sort((a,b)=>b[1].date.localeCompare(a[1].date));
+  $("evUpcoming").innerHTML=up.length?up.map(([i,e])=>evItem(i,e)).join(""):`<div class="empty">No upcoming events. Add your first booking above.</div>`;
+  $("evPast").innerHTML=past.length?past.map(([i,e])=>evItem(i,e)).join(""):`<div class="empty">Nothing here yet.</div>`;
+  // reminders on the P&L screen
+  const due=up.filter(([,e])=>daysUntil(e.date)<=num(e.remind||7));
+  $("reminders").innerHTML=due.map(([i,e])=>{const bal=num(e.price)-num(e.deposit);
+    return `<div class="remind"><b>🎉 ${esc(whenTxt(daysUntil(e.date)))}: ${esc(e.title||"Event")}</b><div class="m">${esc(nice(e.date))}${e.start?" at "+esc(e.start):""}${e.guests?" · "+e.guests+" people":""}${e.address?" · "+esc(e.address):""}${e.status==="enquiry"?" · not confirmed yet":""}${bal>0?" · "+fmt(bal)+" balance to collect":""}</div></div>`}).join("");
+}
+function evStartNew(){editingEv=null;evFill(null);$("evFormTitle").textContent="New event";$("evSave").textContent="Save event";$("evCancelEdit").hidden=true;$("evDelete").hidden=true}
+EVF.forEach(k=>$("ev"+k).addEventListener("input",evCalc));
+$("evSave").onclick=async()=>{
+  const e=evRead();if(!e.title)return toast("Give the event a name");if(!e.date)return toast("Pick a date");
+  e.updated=Date.now();$("evSave").disabled=true;
+  try{
+    if(editingEv){await backend.updEv(editingEv,e);toast("Event updated")}
+    else{const id=await backend.addEv(e);toast("Event saved");if(id){editingEv=id;$("evFormTitle").textContent="Edit event";$("evSave").textContent="Update event";$("evCancelEdit").hidden=false;$("evDelete").hidden=false}}
+  }catch(err){}
+  $("evSave").disabled=false;
+};
+$("evCancelEdit").onclick=()=>{evStartNew();$("evForm").scrollIntoView({behavior:"smooth"})};
+$("evDelete").onclick=async()=>{if(!editingEv||!confirm("Delete this event?"))return;try{await backend.delEv(editingEv);toast("Event deleted");evStartNew()}catch(e){}};
+document.addEventListener("click",ev=>{const b=ev.target.closest("[data-ev]");if(!b)return;const id=b.dataset.ev,e=S.events[id];if(!e)return;
+  editingEv=id;evFill(e);$("evFormTitle").textContent="Edit event";$("evSave").textContent="Update event";$("evCancelEdit").hidden=false;$("evDelete").hidden=false;
+  $("evForm").scrollIntoView({behavior:"smooth"})});
+
 /* ---------- master render ---------- */
 function applyCurrency(){document.querySelectorAll(".cur").forEach(el=>el.setAttribute("data-cur",cur()))}
-function render(){renderToday();renderSettings();salesPreview();renderSpend();renderRegular();renderReport()}
+function render(){renderEvents();renderToday();renderSettings();salesPreview();renderSpend();renderRegular();renderReport()}
 
 /* ---------- events ---------- */
 document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>{
@@ -561,10 +767,10 @@ $("dNext").onclick=()=>{viewDate=addDays(viewDate,1);renderToday()};
 $("dDate").onchange=e=>{if(e.target.value){viewDate=e.target.value;renderToday()}};
 
 $("sDate").onchange=loadSalesForm;
-["sCash","sCard"].forEach(i=>$(i).addEventListener("input",salesPreview));
+["sCash","sCard","sEvCash","sEvCard"].forEach(i=>$(i).addEventListener("input",salesPreview));
 $("sSave").onclick=async()=>{
   const d=$("sDate").value;if(!d)return toast("Pick a date first");
-  const o={date:d,cash:r2(num($("sCash").value)),card:r2(num($("sCard").value)),rates:{...(S.sales[d]&&S.sales[d].rates||S.settings.rates)},updated:Date.now()};
+  const o={date:d,cash:r2(num($("sCash").value)),card:r2(num($("sCard").value)),evCash:r2(num($("sEvCash").value)),evCard:r2(num($("sEvCard").value)),rates:{...(S.sales[d]&&S.sales[d].rates||S.settings.rates)},updated:Date.now()};
   PLATFORMS.forEach(p=>o[p.id]=r2(num($("s-"+p.id).value)));
   $("sSave").disabled=true;
   try{await backend.saveSale(d,o);toast("Sales saved for "+short(d));viewDate=d}catch(e){}
@@ -601,7 +807,7 @@ $("csvBtn").onclick=async()=>{
 };
 
 /* ---------- boot ---------- */
-buildPlatFields();
+buildPlatFields();evStartNew();
 $("sDate").value=today();$("eDate").value=today();$("mSel").value=today().slice(0,7);
 backend=localBackend();applyCurrency();render();loadSalesForm();
 setStatus("Saved on this device only");
@@ -612,7 +818,7 @@ setStatus("Saved on this device only");
       backend=cloud;render();loadSalesForm();setStatus("Shared with your team · signed in as "+cloud.email);
     }else{
       cloud=await dbBackend();
-      if(cloud){backend=cloud;render();loadSalesForm();setStatus("Saved to your account · private to you")}
+      if(cloud){backend=cloud;render();loadSalesForm();setStatus("Shared books · everyone you share this with sees the same figures")}
     }
   }catch(e){setStatus("Couldn't connect to the shared database. Changes are saved on this device only.")}
   try{
